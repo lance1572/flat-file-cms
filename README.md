@@ -14,6 +14,14 @@ The public front controller permits only lower-case, hyphenated page slugs. The 
 
 Point Apache/Nginx at the `public/` directory, or use PHP's development server with `public/` as its document root. Do not expose `content/`, `config/`, or `storage/` directly.
 
+Start the local server from the project folder:
+
+```sh
+php -S 127.0.0.1:8000 -t public
+```
+
+Open [Pages in the admin](http://127.0.0.1:8000/admin/pages) to create, edit, or delete pages. Each page is saved in `content/pages/` and is available at its slug URL. Editing keeps the page's existing slug. The admin is available only through PHP's development server over a loopback connection.
+
 ## Tailwind CSS
 
 Install the development dependencies once, then compile the production stylesheet:

@@ -9,12 +9,26 @@
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-cyan-300 selection:text-slate-950">
   <header class="border-b border-white/10">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 lg:px-8">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-5 lg:px-8">
       <a class="group flex items-center gap-3 text-base font-semibold tracking-tight text-white no-underline" href="<?= htmlspecialchars((string) $site['base_path'], ENT_QUOTES, 'UTF-8') ?: '/' ?>">
         <span class="grid size-8 place-items-center rounded-lg bg-cyan-300 text-sm font-black text-slate-950 transition-transform group-hover:-rotate-6">F</span>
         <?= htmlspecialchars((string) $site['name'], ENT_QUOTES, 'UTF-8') ?>
       </a>
-      <span class="hidden text-sm font-medium text-slate-400 sm:block">A simpler way to publish</span>
+      <?php if ($navigation !== []): ?>
+        <nav aria-label="Main navigation">
+          <ul class="flex flex-wrap gap-3 text-sm font-medium">
+            <?php foreach ($navigation as $menuSlug => $item): ?>
+              <li>
+                <a href="<?= htmlspecialchars($item['url'], ENT_QUOTES, 'UTF-8') ?>"
+                   <?php if ((string) $menuSlug === $slug): ?>aria-current="page"<?php endif; ?>
+                   class="<?= (string) $menuSlug === $slug ? 'text-cyan-300 underline underline-offset-4' : 'text-slate-300 hover:text-cyan-200' ?>">
+                  <?= htmlspecialchars($item['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
+                </a>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </nav>
+      <?php endif; ?>
     </div>
   </header>
   <main class="relative overflow-hidden">
