@@ -9,6 +9,7 @@ use RuntimeException;
 final class PageAdminController
 {
     private const EMPTY_FIELDS = ['title' => '', 'slug' => '', 'description' => '', 'body' => ''];
+    private const SAVE_STATUS = ['create' => 'created', 'edit' => 'updated', 'delete' => 'deleted'];
 
     public function __construct(private readonly ContentRepository $pages)
     {
@@ -25,18 +26,16 @@ final class PageAdminController
         }
 
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        switch ($method) {
-            case 'POST':
-                $this->submit($token);
-                break;
-            case 'GET':
-            case 'HEAD':
-                $this->show($token);
-                break;
-            default:
-                header('Allow: GET, HEAD, POST');
-                http_response_code(405);
+        if ($method === 'POST') {
+            $this->submit($token);
+            return;
         }
+        if (!in_array($method, ['GET', 'HEAD'], true)) {
+            header('Allow: GET, HEAD, POST');
+            http_response_code(405);
+            return;
+        }
+        $this->show($token);
     }
 
     private function startSession(): ?string
@@ -66,7 +65,7 @@ final class PageAdminController
         }
 
         $action = $_POST['action'] ?? '';
-        if (!in_array($action, ['create', 'edit', 'delete'], true)) {
+        if (!is_string($action) || !isset(self::SAVE_STATUS[$action])) {
             http_response_code(400);
             echo 'Invalid page action.';
             return;
@@ -88,12 +87,7 @@ final class PageAdminController
                 'delete' => $this->pages->delete($slug),
             };
             if ($saved) {
-                $status = match ($action) {
-                    'create' => 'created',
-                    'edit' => 'updated',
-                    'delete' => 'deleted',
-                };
-                header('Location: /admin/pages?status=' . $status, true, 303);
+                header('Location: /admin/pages?status=' . self::SAVE_STATUS[$action], true, 303);
                 return;
             }
             http_response_code($action === 'create' ? 409 : 404);
@@ -117,26 +111,28 @@ final class PageAdminController
             return;
         }
 
-        $slug = $_GET['slug'] ?? '';
-        $fields = self::EMPTY_FIELDS;
+        $slug = is_string($_GET['slug'] ?? null) ? $_GET['slug'] : '';
+        if ($action === 'delete' && in_array($slug, $this->pages->slugs(), true)) {
+            $this->render($token, 'delete', ['slug' => $slug]);
+            return;
+        }
+
         try {
-            if (is_string($slug) && in_array($slug, $this->pages->slugs(), true)) {
-                $page = $action === 'edit' ? $this->pages->find($slug) : $fields;
-                if ($page !== null) {
-                    $fields = array_intersect_key($page, $fields);
-                    $fields['slug'] = $slug;
-                    $this->render($token, $action, $fields);
-                    return;
-                }
-            }
+            $page = $action === 'edit' ? $this->pages->find($slug) : null;
         } catch (RuntimeException $exception) {
             http_response_code(422);
             $this->render($token, error: $exception->getMessage());
             return;
         }
 
-        http_response_code(404);
-        $this->render($token, error: 'Page not found.');
+        if ($page === null) {
+            http_response_code(404);
+            $this->render($token, error: 'Page not found.');
+            return;
+        }
+
+        $page['slug'] = $slug;
+        $this->render($token, 'edit', $page);
     }
 
     private function render(string $token, string $action = 'create', array $fields = self::EMPTY_FIELDS, string $error = ''): void
